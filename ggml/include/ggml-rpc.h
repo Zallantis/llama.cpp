@@ -30,6 +30,14 @@ GGML_BACKEND_API void ggml_backend_rpc_start_server(const char * endpoint, const
 GGML_BACKEND_API ggml_backend_reg_t ggml_backend_rpc_reg(void);
 GGML_BACKEND_API ggml_backend_reg_t ggml_backend_rpc_add_server(const char * endpoint);
 
+// wzd vendored patch (DIR-BUG-C004 rev2): thread-local RPC error reporting.
+// Returns the most recent RPC error string captured on the current thread,
+// or NULL when no error has been recorded. Memory is owned by the C++ TU
+// (thread_local std::string); valid until the next mutation on the same
+// thread.
+GGML_BACKEND_API const char * ggml_backend_rpc_last_error(void);
+GGML_BACKEND_API void         ggml_backend_rpc_clear_last_error(void);
+
 #ifdef  __cplusplus
 }
 #endif

@@ -1973,4 +1973,27 @@ ggml_backend_reg_t ggml_backend_rpc_add_server(const char * endpoint) {
 }
 
 
+// ======================================================================
+// wzd vendored patch (DIR-BUG-C004 rev2): thread-local RPC error slot.
+// Producers will write into `g_rpc_last_error` from catch handlers around
+// public entry points (follow-up task — not implemented in this patch);
+// the Rust side reads via ggml_backend_rpc_last_error() and clears via
+// ggml_backend_rpc_clear_last_error() after surfacing the failure.
+// Today this slot is never written, so reads always return NULL — the
+// patch exists solely to satisfy the extern declarations in the Rust
+// wrapper (lib/llama-cpp-rs/llama-cpp-2/src/rpc.rs) and unblock linking.
+// ======================================================================
+static thread_local std::string g_rpc_last_error;
+
+extern "C" const char * ggml_backend_rpc_last_error(void) {
+    if (g_rpc_last_error.empty()) {
+        return nullptr;
+    }
+    return g_rpc_last_error.c_str();
+}
+
+extern "C" void ggml_backend_rpc_clear_last_error(void) {
+    g_rpc_last_error.clear();
+}
+
 GGML_BACKEND_DL_IMPL(ggml_backend_rpc_reg)
