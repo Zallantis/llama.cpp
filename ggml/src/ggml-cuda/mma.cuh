@@ -885,17 +885,31 @@ namespace ggml_cuda_mma {
     static __device__ __forceinline__ void load_ldmatrix_trans(
             tile<I, 8, T, dl> & t, const T * __restrict__ xs0, const int stride) {
 #ifdef TURING_MMA_AVAILABLE
+        static_assert(I == 16, "bad tile width");
+        static_assert(dl == DATA_LAYOUT_I_MAJOR, "bad data layout");
         int * xi = (int *) t.x;
         const int * xs = (const int *) xs0 + (threadIdx.x % t.I) * stride + (threadIdx.x / t.I) * (t.J / 2);
         asm volatile("ldmatrix.sync.aligned.m8n8.x4.trans.b16 {%0, %1, %2, %3}, [%4];"
             : "=r"(xi[0]), "=r"(xi[2]), "=r"(xi[1]), "=r"(xi[3])
             : "l"(xs));
 #elif defined(AMD_MFMA_AVAILABLE) || defined(AMD_WMMA_AVAILABLE)
-        half * xh = (half *) t.x;
+        static_assert(dl == DATA_LAYOUT_I_MAJOR || dl == DATA_LAYOUT_I_MAJOR_MIRRORED, "bad data layout");
+        if constexpr (I == 32) {
 #pragma unroll
-        for (int l = 0; l < t.ne; ++l) {
-            xh[2*l + 0] = ((const half *) xs0)[(2*t.get_j(l) + 0)*(2*stride) + t.get_i(l)];
-            xh[2*l + 1] = ((const half *) xs0)[(2*t.get_j(l) + 1)*(2*stride) + t.get_i(l)];
+            for (int l0 = 0; l0 < t.ne/2; ++l0) {
+                const half2 tmp0 = xs0[(2*t.get_j(l0) + 0)*stride + t.get_i(l0)/2];
+                const half2 tmp1 = xs0[(2*t.get_j(l0) + 1)*stride + t.get_i(l0)/2];
+
+                t.x[l0]          =  __lows2half2(tmp0, tmp1);
+                t.x[l0 + t.ne/2] = __highs2half2(tmp0, tmp1);
+            }
+        } else {
+            half * xh = (half *) t.x;
+#pragma unroll
+            for (int l = 0; l < t.ne; ++l) {
+                xh[2*l + 0] = ((const half *) xs0)[(2*t.get_j(l) + 0)*(2*stride) + t.get_i(l)];
+                xh[2*l + 1] = ((const half *) xs0)[(2*t.get_j(l) + 1)*(2*stride) + t.get_i(l)];
+            }
         }
 #else
         GGML_UNUSED_VARS(t, xs0, stride);
@@ -1387,6 +1401,22 @@ namespace ggml_cuda_mma {
         GGML_UNUSED_VARS(D, A, B);
         NO_DEVICE_CODE;
 #endif // defined(VOLTA_MMA_AVAILABLE)
+    }
+
+    static __device__ __forceinline__ void mma(
+            tile<16, 16, half2, DATA_LAYOUT_I_MAJOR> & D, const tile<32,  8, half2, DATA_LAYOUT_I_MAJOR_MIRRORED> & A,
+            const tile<16,  8, half2, DATA_LAYOUT_I_MAJOR_MIRRORED> & B) {
+#if defined(AMD_WMMA_AVAILABLE) && defined(RDNA3)
+        using halfx16_t = __attribute__((ext_vector_type(16))) _Float16;
+        halfx16_t       * xD = (halfx16_t       *) D.x;
+        const halfx16_t * xA = (const halfx16_t *) A.x;
+        const halfx16_t * xB = (const halfx16_t *) B.x;
+        xD[0] = __builtin_amdgcn_wmma_f16_16x16x16_f16_w32(xA[0], xB[0], xD[0], /*opsel =*/ 0);
+        xD[0] = __builtin_amdgcn_wmma_f16_16x16x16_f16_w32(xA[1], xB[0], xD[0], /*opsel =*/ 1);
+#else
+        GGML_UNUSED_VARS(D, A, B);
+        NO_DEVICE_CODE;
+#endif // TURING_MMA_AVAILABLE
     }
 
     template <data_layout dl_d, data_layout dl_ab>

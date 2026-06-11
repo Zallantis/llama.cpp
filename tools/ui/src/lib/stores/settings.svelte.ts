@@ -131,7 +131,7 @@ class SettingsStore {
 
 			// Default sendOnEnter to false on mobile when the user has no saved preference
 			if (!(SETTINGS_KEYS.SEND_ON_ENTER in savedVal)) {
-				if (new IsMobile().current) {
+				if (isMobile.current) {
 					this.config[SETTINGS_KEYS.SEND_ON_ENTER] = false;
 				}
 			}
@@ -330,8 +330,8 @@ class SettingsStore {
 		const propsDefaults = this.getServerDefaults();
 		if (Object.keys(propsDefaults).length === 0) return;
 
-		const webuiSettings = serverStore.webuiSettings;
-		const webuiSettingsKeys = new Set(webuiSettings ? Object.keys(webuiSettings) : []);
+		const uiSettings = serverStore.uiSettings;
+		const uiSettingsKeys = new Set(uiSettings ? Object.keys(uiSettings) : []);
 
 		for (const [key, propsValue] of Object.entries(propsDefaults)) {
 			const currentValue = getConfigValue(this.config, key);
@@ -343,10 +343,7 @@ class SettingsStore {
 			if (normalizedCurrent === normalizedDefault) {
 				this.userOverrides.delete(key);
 
-				if (
-					!webuiSettingsKeys.has(key) &&
-					getConfigValue(SETTING_CONFIG_DEFAULT, key) === undefined
-				) {
+				if (!uiSettingsKeys.has(key) && getConfigValue(SETTING_CONFIG_DEFAULT, key) === undefined) {
 					setConfigValue(this.config, key, undefined);
 				}
 			}
@@ -354,8 +351,8 @@ class SettingsStore {
 
 		// UI settings need actual values in config (no placeholder mechanism),
 		// so write them for non-overridden keys
-		if (webuiSettings) {
-			for (const [key, value] of Object.entries(webuiSettings)) {
+		if (uiSettings) {
+			for (const [key, value] of Object.entries(uiSettings)) {
 				if (!this.userOverrides.has(key) && value !== undefined) {
 					setConfigValue(this.config, key, value);
 

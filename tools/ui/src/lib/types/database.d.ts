@@ -1,5 +1,5 @@
 import type { ChatMessageTimings, ChatRole, ChatMessageType } from '$lib/types/chat';
-import { AttachmentType } from '$lib/enums';
+import { AttachmentType, ReasoningEffort } from '$lib/enums';
 
 export interface McpServerOverride {
 	serverId: string;
@@ -12,11 +12,22 @@ export interface DatabaseConversation {
 	lastModified: number;
 	name: string;
 	mcpServerOverrides?: McpServerOverride[];
+	thinkingEnabled?: boolean;
+	reasoningEffort?: ReasoningEffort;
 	forkedFromConversationId?: string;
+	pinned?: boolean;
 }
 
 export interface DatabaseMessageExtraAudioFile {
 	type: AttachmentType.AUDIO;
+	name: string;
+	size?: number;
+	base64Data: string;
+	mimeType: string;
+}
+
+export interface DatabaseMessageExtraVideoFile {
+	type: AttachmentType.VIDEO;
 	name: string;
 	size?: number;
 	base64Data: string;
@@ -104,6 +115,8 @@ export interface DatabaseMessage {
 	reasoningContent?: string;
 	/** Serialized JSON array of tool calls made by assistant messages */
 	toolCalls?: string;
+	/** Chat completion id streamed by the server, used to target realtime control (e.g. end reasoning) */
+	completionId?: string;
 	/** Tool call ID for tool result messages (role: 'tool') */
 	toolCallId?: string;
 	children: string[];

@@ -15,7 +15,7 @@
 # ggml-org/llama-common     : ggerganov, aldehir, angt, danbev, ngxson, pwilkin
 # ggml-org/llama-mtmd       : ngxson
 # ggml-org/llama-server     : ggerganov, ngxson, allozaur, angt, ServeurpersoCom
-# ggml-org/llama-webui      : allozaur
+# ggml-org/llama-ui           : allozaur
 
 /.devops/*.Dockerfile                   @ngxson
 /.github/actions/                       @ggml-org/ci

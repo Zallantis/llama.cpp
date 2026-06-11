@@ -1,4 +1,5 @@
 import { ALWAYS_ALLOWED_TOOLS_LOCALSTORAGE_KEY } from '$lib/constants';
+
 import { SvelteSet } from 'svelte/reactivity';
 
 class PermissionsStore {

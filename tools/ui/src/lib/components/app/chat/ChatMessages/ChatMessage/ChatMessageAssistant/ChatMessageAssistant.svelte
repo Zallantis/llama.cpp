@@ -74,7 +74,6 @@
 	const editCtx = getMessageEditContext();
 
 	const isAgentic = $derived(hasAgenticContent(message, toolMessages));
-	const hasReasoning = $derived(!!message.reasoningContent);
 	const processingState = useProcessingState();
 
 	let currentConfig = $derived(config());
@@ -329,7 +328,7 @@
 			{onCopy}
 			{onEdit}
 			{onRegenerate}
-			onContinue={currentConfig.enableContinueGeneration && !hasReasoning ? onContinue : undefined}
+			onContinue={currentConfig.enableContinueGeneration ? onContinue : undefined}
 			{onForkConversation}
 			{onDelete}
 			{onConfirmDelete}
@@ -380,9 +379,6 @@
 		border-radius: 1rem;
 		background: hsl(var(--muted) / 0.3);
 		color: var(--foreground);
-		font-family:
-			ui-monospace, SFMono-Regular, 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas,
-			'Liberation Mono', Menlo, monospace;
 		font-size: 0.875rem;
 		line-height: 1.6;
 		white-space: pre-wrap;

@@ -92,7 +92,7 @@
 !/examples/sycl/*.bat
 !/examples/sycl/*.sh
 
-# Server Web UI temporary files
+# Server Web UI temporary files (+ legacy directory)
 
 /tools/server/webui/node_modules
 /tools/server/webui/dist

@@ -15,8 +15,9 @@ endif()
 # llama-batched-bench executable
 
 set(TARGET llama-batched-bench)
-add_executable(${TARGET} batched-bench.cpp)
-target_link_libraries(${TARGET} PRIVATE llama-common llama ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(${TARGET} main.cpp)
+target_link_libraries(${TARGET} PRIVATE llama-batched-bench-impl)
 target_compile_features(${TARGET} PRIVATE cxx_std_17)
 
 if(LLAMA_TOOLS_INSTALL)

@@ -20,7 +20,6 @@
  */
 
 import { browser } from '$app/environment';
-import { base } from '$app/paths';
 import { SETTINGS_KEYS } from '$lib/constants';
 import { MCPService } from '$lib/services/mcp.service';
 import { config, settingsStore } from '$lib/stores/settings.svelte';

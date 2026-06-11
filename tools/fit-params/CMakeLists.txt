@@ -15,8 +15,9 @@ endif()
 # llama-fit-params executable
 
 set(TARGET llama-fit-params)
-add_executable(${TARGET} fit-params.cpp)
-target_link_libraries(${TARGET} PRIVATE llama-common llama ${CMAKE_THREAD_LIBS_INIT})
+
+add_executable(${TARGET} main.cpp)
+target_link_libraries(${TARGET} PRIVATE llama-fit-params-impl)
 target_compile_features(${TARGET} PRIVATE cxx_std_17)
 
 if(LLAMA_TOOLS_INSTALL)

@@ -8,6 +8,7 @@
 		hideOrgName?: boolean;
 		showRaw?: boolean;
 		hideQuantization?: boolean;
+		hideTags?: boolean;
 		aliases?: string[];
 		tags?: string[];
 		class?: string;
@@ -17,7 +18,8 @@
 		modelId,
 		hideOrgName = false,
 		showRaw = undefined,
-		hideQuantization = false,
+		hideQuantization,
+		hideTags,
 		aliases,
 		tags,
 		class: className = '',
@@ -31,9 +33,14 @@
 
 	let parsed = $derived(ModelsService.parseModelId(modelId));
 	let resolvedShowRaw = $derived(showRaw ?? (config().showRawModelNames as boolean) ?? false);
-	let displayName = $derived(parsed.modelName ?? modelId);
-	let allAliases = $derived(aliases ?? []);
-	let allTags = $derived([...(parsed.tags ?? []), ...(tags ?? [])]);
+	let resolvedHideQuantization = $derived(hideQuantization ?? !config().showModelQuantization);
+	let resolvedHideTags = $derived(hideTags ?? !config().showModelTags);
+
+	let uniqueAliases = $derived([...new Set(aliases ?? [])]);
+	let uniqueTags = $derived([...new Set([...(parsed.tags ?? []), ...(tags ?? [])])]);
+
+	let primaryAlias = $derived(uniqueAliases.length === 1 ? uniqueAliases[0] : null);
+	let displayName = $derived(primaryAlias ?? parsed.modelName ?? modelId);
 </script>
 
 {#if resolvedShowRaw}
@@ -50,19 +57,23 @@
 			</span>
 		{/if}
 
-		{#if parsed.quantization && !hideQuantization}
+		{#if parsed.quantization && !resolvedHideQuantization}
 			<span class={badgeClass}>
 				{parsed.quantization}
 			</span>
 		{/if}
 
-		{#if allAliases.length > 0}
-			{#each allAliases as alias (alias)}
+		{#if primaryAlias}
+			{#if primaryAlias !== parsed.modelName}
+				<span class={badgeClass}>{parsed.modelName ?? modelId}</span>
+			{/if}
+		{:else if uniqueAliases.length > 1}
+			{#each uniqueAliases as alias (alias)}
 				<span class={badgeClass}>{alias}</span>
 			{/each}
 		{/if}
 
-		{#if uniqueTags.length > 0}
+		{#if uniqueTags.length > 0 && !resolvedHideTags}
 			{#each uniqueTags as tag (tag)}
 				<span class={tagBadgeClass}>{tag}</span>
 			{/each}

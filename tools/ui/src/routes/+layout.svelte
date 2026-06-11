@@ -7,11 +7,13 @@
 	import { untrack } from 'svelte';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
+
 	import {
 		DesktopIconStrip,
 		DialogConversationTitleUpdate,
 		SidebarNavigation
 	} from '$lib/components/app';
+
 	import { conversationsStore } from '$lib/stores/conversations.svelte';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip';
@@ -24,15 +26,13 @@
 	import { modelsStore } from '$lib/stores/models.svelte';
 	import { mcpStore } from '$lib/stores/mcp.svelte';
 	import { TOOLTIP_DELAY_DURATION } from '$lib/constants';
-	import { IsMobile } from '$lib/hooks/is-mobile.svelte';
 	import { useKeyboardShortcuts } from '$lib/hooks/use-keyboard-shortcuts.svelte';
 	import { useSettingsNavigation } from '$lib/hooks/use-settings-navigation.svelte';
 	import { conversations } from '$lib/stores/conversations.svelte';
+	import { isMobile } from '$lib/stores/viewport.svelte';
 
 	let { children } = $props();
-
 	let alwaysShowSidebarOnDesktop = $derived(config().alwaysShowSidebarOnDesktop);
-	let isMobile = new IsMobile();
 	let isDesktop = $derived(!isMobile.current);
 	let sidebarOpen = $state(false);
 	let mounted = $state(false);
@@ -52,10 +52,9 @@
 	let titleUpdateResolve: ((value: boolean) => void) | null = null;
 	const panelNav = useSettingsNavigation();
 
-	const panelNav = useSettingsNavigation();
-
 	function navigateToConversation(direction: -1 | 1) {
 		const allConvs = conversations();
+
 		if (allConvs.length === 0) return;
 
 		const currentId = page.params.id;
@@ -67,6 +66,7 @@
 		}
 
 		const idx = allConvs.findIndex((c) => c.id === currentId);
+
 		if (idx === -1) return;
 
 		const targetIdx = idx + direction;
@@ -81,38 +81,41 @@
 	// Global keyboard shortcuts
 	const { handleKeydown } = useKeyboardShortcuts({
 		editActiveConversation: () => chatSidebar?.editActiveConversation?.(),
-
 		navigateToPrevConversation: () => navigateToConversation(-1),
-
 		navigateToNextConversation: () => navigateToConversation(1)
 	});
 
 	function checkApiKey() {
 		const apiKey = config().apiKey;
 
-		if (
-			(page.route.id === '/(chat)' || page.route.id === '/(chat)/chat/[id]') &&
-			page.status !== 401 &&
-			page.status !== 403
-		) {
-			const headers: Record<string, string> = {
-				'Content-Type': 'application/json'
-			};
-
-			if (apiKey && apiKey.trim() !== '') {
-				headers.Authorization = `Bearer ${apiKey.trim()}`;
-			}
-
-			fetch(`${base}/props`, { headers })
-				.then((response) => {
-					if (response.status === 401 || response.status === 403) {
-						window.location.reload();
-					}
-				})
-				.catch((e) => {
-					console.error('Error checking API key:', e);
-				});
+		// No API key configured — server doesn't require auth, no need to validate.
+		// This mirrors the early return in validateApiKey() to avoid redundant /props requests.
+		if (!apiKey || apiKey.trim() === '') {
+			return;
 		}
+
+		untrack(() => {
+			if (
+				(page.route.id === '/(chat)' || page.route.id === '/(chat)/chat/[id]') &&
+				page.status !== 401 &&
+				page.status !== 403
+			) {
+				const headers: Record<string, string> = {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${apiKey.trim()}`
+				};
+
+				fetch(`${base}/props`, { headers })
+					.then((response) => {
+						if (response.status === 401 || response.status === 403) {
+							window.location.reload();
+						}
+					})
+					.catch((e) => {
+						console.error('Error checking API key:', e);
+					});
+			}
+		});
 	}
 
 	function handleTitleUpdateCancel() {
@@ -140,6 +143,7 @@
 	$effect(() => {
 		if (alwaysShowSidebarOnDesktop && isDesktop) {
 			sidebarOpen = true;
+
 			return;
 		}
 	});
@@ -164,6 +168,14 @@
 			});
 		}
 	});
+
+	// Inject custom CSS at runtime through an action on the head style node
+	// textContent keeps the value as text, never parsed as HTML
+	function customCss(node: HTMLStyleElement) {
+		$effect(() => {
+			node.textContent = (config().customCss as string | undefined) ?? '';
+		});
+	}
 
 	// Fetch router models when in router mode (for status and modalities)
 	// Wait for models to be loaded first, run only once
@@ -223,6 +235,12 @@
 	});
 </script>
 
+<svelte:head>
+	{#if config().customCss}
+		<style use:customCss></style>
+	{/if}
+</svelte:head>
+
 <Tooltip.Provider delayDuration={TOOLTIP_DELAY_DURATION}>
 	<ModeWatcher />
 	<Toaster richColors />
@@ -236,10 +254,10 @@
 	/>
 
 	<Sidebar.Provider bind:open={sidebarOpen}>
-		<div class="flex h-screen w-full" style:height="{innerHeight}px">
-			<Sidebar.Root variant="floating" class="h-full">
-				<SidebarNavigation bind:this={chatSidebar} />
-			</Sidebar.Root>
+		<div class="flex h-dvh w-full">
+			<Sidebar.Root variant="floating" class="h-full"
+				><SidebarNavigation bind:this={chatSidebar} /></Sidebar.Root
+			>
 
 			{#if !(alwaysShowSidebarOnDesktop && isDesktop) && !(panelNav.isSettingsRoute && !isDesktop)}
 				{#if mounted}

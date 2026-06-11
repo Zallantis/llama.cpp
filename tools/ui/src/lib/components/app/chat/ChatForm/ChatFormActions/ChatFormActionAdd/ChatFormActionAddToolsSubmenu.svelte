@@ -1,10 +1,11 @@
 <script lang="ts">
-	import { PencilRuler, ChevronDown, ChevronRight, Loader2, Info } from '@lucide/svelte';
+	import { PencilRuler, ChevronDown, ChevronRight, Loader2, Info, Check } from '@lucide/svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import * as Collapsible from '$lib/components/ui/collapsible';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import * as Tooltip from '$lib/components/ui/tooltip';
 	import { toolsStore } from '$lib/stores/tools.svelte';
+	import { CLI_FLAGS } from '$lib/constants';
 	import { mcpStore } from '$lib/stores/mcp.svelte';
 	import { useToolsPanel } from '$lib/hooks/use-tools-panel.svelte';
 
@@ -33,7 +34,7 @@
 						<Info class="mt-0.5 h-4 w-4 shrink-0" />
 
 						<span>
-							Run llama-server with <code>--tools</code> flag to enable
+							Run llama-server with <code>{CLI_FLAGS.TOOLS}</code> flag to enable
 
 							<strong>Built-in Tools</strong>.
 						</span>
@@ -64,7 +65,7 @@
 			<div class="max-h-80 overflow-y-auto p-2 pr-1">
 				{#each toolsPanel.activeGroups as group (group.label)}
 					{@const isExpanded = toolsPanel.expandedGroups.has(group.label)}
-					{@const { checked, indeterminate } = toolsPanel.getGroupCheckedState(group)}
+					{@const checked = toolsPanel.isGroupChecked(group)}
 					{@const favicon = toolsPanel.getFavicon(group)}
 
 					<Collapsible.Root
@@ -103,12 +104,14 @@
 
 							<Tooltip.Root>
 								<Tooltip.Trigger>
-									<Checkbox
-										{checked}
-										{indeterminate}
-										onCheckedChange={() => toolsStore.toggleGroup(group)}
-										class="mr-2 h-4 w-4 shrink-0"
-									/>
+									{#snippet child({ props })}
+										<Checkbox
+											{...props}
+											{checked}
+											onCheckedChange={() => toolsPanel.toggleGroupByLabel(group.label)}
+											class="mr-2 h-4 w-4 shrink-0"
+										/>
+									{/snippet}
 								</Tooltip.Trigger>
 
 								<Tooltip.Content side="right">
@@ -122,20 +125,25 @@
 
 						<Collapsible.Content>
 							<div class="ml-4 flex flex-col gap-0.5 border-l border-border/50 pl-2">
-								{#each group.tools as tool (tool.function.name)}
+								{#each group.tools as entry (entry.key)}
+									{@const enabled = toolsStore.isToolEnabled(entry.key)}
 									<button
 										type="button"
 										class="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted/50"
-										onclick={() => toolsStore.toggleTool(tool.function.name)}
+										onclick={() => toolsStore.toggleTool(entry.key)}
 									>
-										<Checkbox
-											checked={toolsStore.isToolEnabled(tool.function.name)}
-											onCheckedChange={() => toolsStore.toggleTool(tool.function.name)}
-											class="h-4 w-4 shrink-0"
-										/>
+										<span
+											data-slot="checkbox"
+											data-state={enabled ? 'checked' : 'unchecked'}
+											class="flex size-4 shrink-0 items-center justify-center rounded-[4px] border border-input data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+										>
+											{#if enabled}
+												<Check class="size-3.5" />
+											{/if}
+										</span>
 
 										<span class="min-w-0 flex-1 truncate font-mono text-[12px]">
-											{tool.function.name}
+											{entry.definition.function.name}
 										</span>
 									</button>
 								{/each}

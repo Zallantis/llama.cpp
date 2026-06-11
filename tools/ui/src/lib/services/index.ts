@@ -262,6 +262,26 @@ export { ParameterSyncService } from './parameter-sync.service';
 export { MCPService } from './mcp.service';
 
 /**
+ * **SandboxService** - Frontend JavaScript execution in a browser sandbox
+ *
+ * Stateless executor for the run_javascript frontend tool. Model generated
+ * code runs in a Web Worker spawned inside a sandboxed iframe with an opaque
+ * origin: no access to the app origin, its storage or its API, and outgoing
+ * requests carry a null origin. The code never touches a main thread, so the
+ * parent enforces the timeout by removing the iframe, which terminates the
+ * worker at the browser level.
+ *
+ * **Architecture & Relationships:**
+ * - **SandboxService** (this class): Stateless sandbox execution
+ * - **toolsStore**: Exposes the tool definition when the sandbox is enabled
+ * - **agenticStore**: Dispatches ToolSource.FRONTEND calls here
+ *
+ * @see SANDBOX_TOOL_DEFINITION in constants/sandbox.ts - tool schema sent to the LLM
+ * @see agenticStore in stores/agentic.svelte.ts - tool dispatch
+ */
+export { SandboxService } from './sandbox.service';
+
+/**
  * **RouterService** — Dynamic route URL construction utility
  *
  * Stateless utility for building dynamic route URLs from ROUTES base paths.
@@ -283,3 +303,31 @@ export { MCPService } from './mcp.service';
  * @see ROUTES in constants/routes.ts — static route base paths
  */
 export { RouterService } from './router.service';
+
+/**
+ * **MigrationService** — Unified data migration hook
+ *
+ * Centralizes all data migrations (localStorage, IndexedDB, legacy formats) into a single
+ * initialization point. All migrations are NON-DESTRUCTIVE - legacy data is preserved
+ * for downgrade compatibility (no rollback needed).
+ *
+ * **Current Migrations:**
+ * 1. **localStorage prefix**: Copy LlamaCppWebui.* → LlamaUi.* (both preserved)
+ * 2. **IndexedDB database**: Copy LlamacppWebui → LlamaUi (both preserved)
+ * 3. **Legacy message format**: Marker-based → Structured format
+ * 4. **Theme key**: Copy standalone `theme` → config object (both preserved)
+ *
+ * **Usage:**
+ * ```typescript
+ * import { MigrationService } from '$lib/services';
+ *
+ * // Run all migrations on app startup (non-destructive)
+ * await MigrationService.runAllMigrations();
+ *
+ * // Check migration status
+ * const state = MigrationService.getState();
+ * ```
+ *
+ * @see migration.service.ts — full implementation (non-destructive)
+ */
+export { MigrationService } from './migration.service';

@@ -14,7 +14,7 @@ export { validateApiKey } from './api-key-validation';
 
 // Attachment utilities
 export { getAttachmentDisplayItems, isMcpPrompt, isMcpResource } from './attachment-display';
-export { isTextFile, isImageFile, isPdfFile, isAudioFile } from './attachment-type';
+export { isTextFile, isImageFile, isPdfFile, isAudioFile, isVideoFile } from './attachment-type';
 
 // Textarea utilities
 export { default as autoResizeTextarea } from './autoresize-textarea';
@@ -76,7 +76,8 @@ export {
 	formatJsonPretty,
 	formatTime,
 	formatPerformanceTime,
-	formatAttachmentText
+	formatAttachmentText,
+	formatReasoningPreview
 } from './formatters';
 
 // IME utilities
