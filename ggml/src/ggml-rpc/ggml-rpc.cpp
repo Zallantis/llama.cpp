@@ -816,6 +816,40 @@ void ggml_backend_rpc_get_device_memory(const char * endpoint, uint32_t device, 
     get_device_memory(sock, device, free, total);
 }
 
+// Master-side wire-protocol probe (wzd fork). Resolved at runtime via the RPC
+// registry's get_proc_address("rpc_get_proto_version"); callers that predate
+// this symbol (older workers) degrade gracefully on the Rust side. Uses a
+// fresh, un-cached probe socket and a single HELLO round-trip so the shared
+// get_socket() connection cache is left untouched; the probe socket is torn
+// down as soon as the handshake response is read. Reports the version the
+// server advertises in rpc_msg_hello_rsp (see rpc_server::hello).
+extern "C" bool rpc_get_proto_version(const char * endpoint, uint32_t * major, uint32_t * minor) {
+    if (endpoint == nullptr || major == nullptr || minor == nullptr) {
+        return false;
+    }
+    std::string host;
+    int port;
+    if (!parse_endpoint(endpoint, host, port)) {
+        return false;
+    }
+    if (!rpc_transport_init()) {
+        return false;
+    }
+    auto sock = socket_t::connect(host.c_str(), port);
+    if (sock == nullptr) {
+        return false;
+    }
+    rpc_msg_hello_req request = {};
+    rpc_msg_hello_rsp response = {};
+    sock->get_caps(request.conn_caps);
+    if (!send_rpc_cmd(sock, RPC_CMD_HELLO, &request, sizeof(request), &response, sizeof(response))) {
+        return false;
+    }
+    *major = response.major;
+    *minor = response.minor;
+    return true;
+}
+
 // RPC server-side implementation
 
 class rpc_server {
@@ -1888,6 +1922,9 @@ static void * ggml_backend_rpc_get_proc_address(ggml_backend_reg_t reg, const ch
     }
     if (std::strcmp(name, "ggml_backend_rpc_start_server") == 0) {
         return (void *)ggml_backend_rpc_start_server;
+    }
+    if (std::strcmp(name, "rpc_get_proto_version") == 0) {
+        return (void *)rpc_get_proto_version;
     }
     return NULL;
 
