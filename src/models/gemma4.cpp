@@ -433,6 +433,7 @@ llama_model_gemma4::graph::graph(const llama_model & model, const llm_graph_para
     if (!model.vocab.get_suppress_tokens().empty()) {
         auto inp_bias = std::make_unique<llm_graph_input_logits_bias>(model.vocab);
         inp_bias->logits_bias = ggml_new_tensor_1d(ctx0, GGML_TYPE_F32, inp_bias->arr.size());
+        ggml_set_input(inp_bias->logits_bias);
         cur = ggml_add(ctx0, cur, inp_bias->logits_bias);
         res->add_input(std::move(inp_bias));
     }
